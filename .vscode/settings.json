@@ -1,0 +1,9 @@
+{
+  "C_Cpp.intelliSenseEngine": "default",
+  "files.associations": {
+    "stdio.h": "c",
+    "espnow_comms.h": "c",
+    "queue.h": "c",
+    "task.h": "c"
+  }
+}

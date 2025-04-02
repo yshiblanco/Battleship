@@ -2,8 +2,10 @@
 #define INC_ESPNOW_COMMS_H
 
 #include <stdint.h>
+#include "freertos/queue.h"
 
 const uint8_t peerMac[] = {0x70, 0x04, 0x1D, 0xF7, 0xB3, 0xEE}       //MAC address of the other ESP
+QueueHandle_t dataQueue;
 
 void initWifi(void);
 void initESPNOW(void);
