@@ -1,21 +1,22 @@
 #include "espnow_comms.h"
-#include "esp_now.h"
 #include "esp_mac.h"
 #include "esp_wifi.h"
 #include "esp_event.h"
 #include "esp_system.h"
 #include "esp_netif.h"
-#include "nvs_flash.h"
 #include "esp_err.h"
 #include "freertos/freertos.h"
 #include "freertos/queue.h"
 #include "esp_log.h"
-#include <stdio.h>
+#include <string.h>
+
 
 static const char* TAG = "ESP-NOW";
 QueueHandle_t dataQueue;
+const uint8_t peerMac[6] = {0x70, 0x04, 0x1D, 0xF7, 0xB3, 0xE0};
 
 void initWifi(void) {
+
     //Initializing WiFi (needed for ESP-NOW)
     ESP_ERROR_CHECK(esp_netif_init());
     ESP_ERROR_CHECK(esp_event_loop_create_default());
@@ -27,7 +28,7 @@ void initWifi(void) {
 }
 
 void onSend(const uint8_t* macAddress, esp_now_send_status_t status) {
-    if (status == ESP_OK) {
+    if (status == ESP_NOW_SEND_SUCCESS) {
         ESP_LOGI(TAG, "Data was succesfully sent\n");
     } else {
         ESP_LOGI(TAG, "Data failed to send\n");
@@ -35,47 +36,54 @@ void onSend(const uint8_t* macAddress, esp_now_send_status_t status) {
 }
 
 void onReceive(const esp_now_recv_info_t* info, const uint8_t* receivedData, int lenData) {
-    ESP_LOGI(TAG, "Data receieved: %d\n", *receievedData);
+    ESP_LOGI(TAG, "Data received: %d\n", *receivedData);
 
-    if (xQueueSend(dataQueue, receievedData, 10) != pdTRUE) {
+    if (xQueueSend(dataQueue, receivedData, portMAX_DELAY) != pdTRUE) {
         ESP_LOGI(TAG, "Data failed to be added to the queue (queue is full)\n");
     }
 }
 
 void initESPNOW(void) {
-    //Initializing ESP NOW, registering callback functions, and opening two-way communication
+    //Initializing ESP NOW
     esp_now_init();
     
+    //Registering callback functions
     esp_now_register_send_cb(onSend);
     esp_now_register_recv_cb(onReceive);
 
-    esp_now_peer_info_t peerInfo = {};
-    memcpy(peerInfo.peer_addr, peerMac, sizeof(peerInfo.peer_addr)); //copy mac address into the peer address
+    //Defining peer info
+    esp_now_peer_info_t *peerInfo = malloc(sizeof(esp_now_peer_info_t));    //allocating memory with size specific to the struct
+    memset(peerInfo, 0, sizeof(esp_now_peer_info_t));                       //sets all the bytes of the allocated memory to 0 (ensuring no issues from prev data stored there)
+    peerInfo->channel = 1;
+    peerInfo->ifidx = ESP_IF_WIFI_STA;
+    peerInfo->encrypt = false;
+    memcpy(peerInfo->peer_addr, peerMac, ESP_NOW_ETH_ALEN);         //copies mac addr into the corresponding place in the peerInfo struct
 
-    peerInfo.channel = 0;
-    peerInfo.encrypt = false;
-    esp_err_t result = esp_now_add_peer(&peerInfo);
+    //Adding peer and logging outcome
+    esp_err_t result = esp_now_add_peer(peerInfo);
     if (result == ESP_OK) {
         ESP_LOGI(TAG, "Peer added successfully!\n");
     } else {
         ESP_LOGI(TAG, "Failed to add peer: %d\n", result);
     }
 
+    free(peerInfo);                                                 //freeing up the memory we allocated earlier (must be done when dynamically allocating memory)
+
     //Creating queue of size 5 for handling data sent over ESP-NOW
-    dataQueue = xQueueCreate(5, sizeof(uint8_t*));
+    dataQueue = xQueueCreate(5, sizeof(uint8_t));
 
 }
 
-void sendData(uint8_t* data) {
-    esp_now_send(peerMac, data, sizeof(uint8_t));
+void sendData(uint8_t* data, size_t dataSize) {
+    esp_now_send(peerMac, data, dataSize);
 }
 
 void handleDataTask(void* pvParameters) {
 
-    uint8_t* receivedData;
+    uint8_t receivedData;
 
     while(1) {
-        if (xQueueReceive(dataQueue, &receivedData, 10) == pdTRUE) {
+        if (xQueueReceive(dataQueue, &receivedData, portMAX_DELAY) == pdTRUE) {
             printf("Data received: %d", receivedData);          //test
         }
     }
