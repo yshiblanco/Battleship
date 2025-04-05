@@ -5,7 +5,7 @@
 #include "esp_system.h"
 #include "esp_netif.h"
 #include "esp_err.h"
-#include "freertos/freertos.h"
+#include "freertos/FreeRTOS.h"
 #include "freertos/queue.h"
 #include "esp_log.h"
 #include <string.h>
@@ -13,7 +13,7 @@
 
 static const char* TAG = "ESP-NOW";
 QueueHandle_t dataQueue;
-const uint8_t peerMac[6] = {0x70, 0x04, 0x1D, 0xF7, 0xB3, 0xE0};
+const uint8_t peerMac[6] = {0x70, 0x04, 0x1D, 0xF7, 0xB3, 0xEE};
 
 void initWifi(void) {
 
