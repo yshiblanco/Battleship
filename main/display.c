@@ -1,58 +1,47 @@
 #include "display.h"
+#include "matrix.h"
 #include <stdint.h>
+#include <string.h>
+#include "freertos/FreeRTOS.h"
 #include "esp_err.h"
 #include "esp_log.h"
 #include "driver/spi_common.h"
 #include "driver/spi_master.h"
 #include "driver/gpio.h"
 
-//SPI defines for player grid
+//GPIO pins for buttons
+#define CONFIRM_BUTTON  38
+#define ROTATE_BUTTON   33
+#define UP_BUTTON       34
+#define RIGHT_BUTTON    35
+#define DOWN_BUTTON     36
+#define LEFT_BUTTON     37       
+
+//SPI defines for grids
 #define SPI2_MOSI_PIN    11
-#define SPI2_CS0_PIN     10
-#define SPI2_CS1_PIN     9
+#define SPI2_CS0_PIN     10             //player grid
+#define SPI2_CS1_PIN     9              //attack grid
 #define SPI2_CLK_PIN     12
 
-//SPI defines for attack grid
-#define SPI3_MOSI_PIN    3
-#define SPI3_CS0_PIN     5
-#define SPI3_CS1_PIN     6
-#define SPI3_CLK_PIN     4
-
 //Configuring LED matrices as devices
-static spi_device_interface_config_t playerRow0 = {
+static spi_device_interface_config_t playerMatrix = {
+    .address_bits = 8,
     .clock_speed_hz = 1000000,                  //1MHz clock speed; matrix has max rate of 10MHz
     .mode = 0,
     .spics_io_num = SPI2_CS0_PIN,
     .queue_size = 2,
 };
 
-static spi_device_interface_config_t playerRow1 = {
+static spi_device_interface_config_t attackMatrix = {
+    .address_bits = 8,
     .clock_speed_hz = 1000000,                  
     .mode = 0,
     .spics_io_num = SPI2_CS1_PIN,
     .queue_size = 2,
 };
 
-static spi_device_interface_config_t attackRow0 = {
-    .clock_speed_hz = 1000000,                  
-    .mode = 0,
-    .spics_io_num = SPI3_CS0_PIN,
-    .queue_size = 2,
-};
-
-static spi_device_interface_config_t attackRow1 = {
-    .clock_speed_hz = 1000000,                  
-    .mode = 0,
-    .spics_io_num = SPI3_CS1_PIN,
-    .queue_size = 2,
-};
-
-static spi_device_handle_t playerRow0Handle;
-static spi_device_handle_t playerRow1Handle;
-static spi_device_handle_t attackRow0Handle;
-static spi_device_handle_t attackRow1Handle;
-
-
+static spi_device_handle_t playerHandle;
+static spi_device_handle_t attackHandle;
 
 void initSPI(void) {
     //Initialize configuration for SPI buses
@@ -63,21 +52,106 @@ void initSPI(void) {
         .max_transfer_sz = 32,                 
     };
 
-    spi_bus_config_t bus3Config = {
-        .miso_io_num = -1,
-        .mosi_io_num = SPI3_MOSI_PIN,
-        .sclk_io_num = SPI3_CLK_PIN,
-        .max_transfer_sz = 32,
-    };
-
-    //Initialize SPI buses
+    //Initialize SPI bus
     ESP_ERROR_CHECK(spi_bus_initialize(SPI2_HOST, &bus2Config, 0));
-    ESP_ERROR_CHECK(spi_bus_initialize(SPI3_HOST, &bus3Config, 0));
 
     //Adding LED matrices to SPI buses
-    ESP_ERROR_CHECK(spi_bus_add_device(SPI2_HOST, &playerRow0, &playerRow0Handle));
-    ESP_ERROR_CHECK(spi_bus_add_device(SPI2_HOST, &playerRow1, &playerRow1Handle));
-    ESP_ERROR_CHECK(spi_bus_add_device(SPI3_HOST, &attackRow0, &attackRow0Handle));
-    ESP_ERROR_CHECK(spi_bus_add_device(SPI3_HOST, &attackRow1, &attackRow1Handle));
+    ESP_ERROR_CHECK(spi_bus_add_device(SPI2_HOST, &playerMatrix, &playerHandle));
+    ESP_ERROR_CHECK(spi_bus_add_device(SPI2_HOST, &attackMatrix, &attackHandle));
 }
+
+void sendCmd(spi_device_handle_t devHandle, uint8_t addr, uint8_t data) {
+    spi_transaction_t trans = {0};
+    trans.flags = SPI_TRANS_USE_TXDATA;
+    trans.length = 16;
+    trans.tx_data[0] = addr;
+    trans.tx_data[1] = data;
+    ESP_ERROR_CHECK(spi_device_polling_transmit(devHandle, &trans));
+}
+
+void initDisplays(void) {
+    //Initializing Player Grid
+    sendCmd(playerHandle, 0x0F, 0x00); //Disable display test
+    sendCmd(playerHandle, 0x0C, 0x01); //Exit shutdown mode (turn on)
+    sendCmd(playerHandle, 0x0B, 0x07); //Scan all 8 digits
+    sendCmd(playerHandle, 0x0A, 0x01); //Set intensity/brightness
+    sendCmd(playerHandle, 0x09, 0x00); //No decode mode
+
+    //Initializing Attack Grid
+    sendCmd(attackHandle, 0x0F, 0x00); 
+    sendCmd(attackHandle, 0x0C, 0x01); 
+    sendCmd(attackHandle, 0x0B, 0x07); 
+    sendCmd(attackHandle, 0x0A, 0x01); 
+    sendCmd(attackHandle, 0x09, 0x00); 
+}
+void updateDisplay(GridMatrix* grid, spi_device_handle_t devHandle) {
+    uint8_t addr, data;
+
+    for (addr = 1; addr <= 8; addr++) {
+        data = getRow(grid, addr - 1);
+        sendCmd(devHandle, addr, data);
+    }
+}
+
+void placeShips(int shipLength) {
+    int cursorX = 7;
+    int cursorY = 7;
+    bool vertical = true;
+
+    while(gpio_get_level(CONFIRM_BUTTON) == 1) {
+
+        //User cursor moves up
+        if (gpio_get_level(UP_BUTTON) == 0) {
+            if ((vertical && (cursorY - shipLength < 0)) || (!vertical && (cursorY - 1 < 0))) {
+                //Do nothing, goes past bounds
+            } else {
+                cursorY--;
+            }
+        }
+
+        //User cursor moves right
+        if (gpio_get_level(RIGHT_BUTTON) == 0) {
+            if ((!vertical && (cursorX + shipLength > 7)) || (vertical && (cursorX + 1 > 7))) {
+                //Do nothing, goes past bounds
+            } else {
+                cursorX++;
+            }
+        }
+
+        //User cursor moves down
+        if (gpio_get_level(DOWN_BUTTON) == 0) {
+            if (cursorY + 1 > 7) {
+                //Do nothing, goes past bounds
+            } else {
+                cursorY++;
+            }
+        }
+
+        //User cursor moves left
+        if (gpio_get_level(LEFT_BUTTON) == 0) {
+            if (cursorX - 1 < 0) {
+                //Do nothing, goes past bounds
+            } else {
+                cursorX--;
+            }
+        }
+
+        if (gpio_get_level(ROTATE_BUTTON) == 0)  {
+            if (!((vertical && (cursorX > 7 - shipLength + 1)) || (!vertical && (cursorY < shipLength - 1)))) {
+                vertical = !vertical;
+            }
+        }
+
+        updateMatrix(&playerGrid, shipLength, cursorX, cursorY, vertical);
+        updateDisplay(&playerGrid, playerHandle);
+        vTaskDelay(pdMS_TO_TICKS(200));
+    }
+
+}
+
+
+
+
+
+
 
