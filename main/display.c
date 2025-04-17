@@ -94,11 +94,14 @@ void updateDisplay(GridMatrix* grid, spi_device_handle_t devHandle) {
 }
 
 void placeShips(int shipLength) {
+    GridMatrix displayedGrid = {0};
+    GridMatrix tempGrid = {0};
+
     int cursorX = 7;
     int cursorY = 7;
     bool vertical = true;
 
-    while(gpio_get_level(CONFIRM_BUTTON) == 1) {
+    while(1) {
 
         //User cursor moves up
         if (gpio_get_level(UP_BUTTON) == 0) {
@@ -142,10 +145,24 @@ void placeShips(int shipLength) {
             }
         }
 
-        updateMatrix(&playerGrid, shipLength, cursorX, cursorY, vertical);
-        updateDisplay(&playerGrid, playerHandle);
+        //holds information only about the ship currently being placed
+        resetMatrix(&tempGrid);
+        updateMatrix(&tempGrid, shipLength, cursorX, cursorY, vertical);        
+
+        if (gpio_get_level(CONFIRM_BUTTON) == 0 && !(checkOverlap(&playerGrid, &tempGrid))) {
+            break;
+        }
+
+        //displays the ship currently being placed and the previous ships placed
+        resetMatrix(&displayedGrid);
+        mergeMatrix(&displayedGrid, &playerGrid);
+        updateMatrix(&displayedGrid, shipLength, cursorX, cursorY, vertical);
+        updateDisplay(&displayedGrid, playerHandle);
+
         vTaskDelay(pdMS_TO_TICKS(200));
     }
+
+    mergeMatrix(&playerGrid, &tempGrid);
 
 }
 

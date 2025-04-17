@@ -47,7 +47,6 @@ void resetMatrix(GridMatrix* matrix) {
 }
 
 void updateMatrix(GridMatrix* matrix, int shipLength, int cursorX, int cursorY, bool vertical) {
-    resetMatrix(matrix);
     int i;
 
     if (vertical) {
@@ -59,4 +58,28 @@ void updateMatrix(GridMatrix* matrix, int shipLength, int cursorX, int cursorY, 
             (*matrix)[cursorY][i] = 1;
         }
     }
+}
+
+void mergeMatrix(GridMatrix* baseGrid, GridMatrix* otherGrid) {
+    int i, j;
+
+    for (i = 0; i < 8; i++) {
+        for (j = 0; j < 8; j++) {
+            (*baseGrid)[i][j] |= (*otherGrid)[i][j];
+        }
+    }
+}
+
+bool checkOverlap(GridMatrix* baseGrid, GridMatrix* otherGrid) {
+    int i, j;
+
+    for (i = 0; i < 8; i++) {
+        for (j = 0; j < 8; j++) {
+            if (((*baseGrid)[i][j] == 1) && ((*otherGrid)[i][j] == 1)) {
+                return true;
+            }
+        }
+    }
+
+    return false;
 }
