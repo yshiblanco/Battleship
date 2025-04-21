@@ -147,7 +147,7 @@ void placeShips(int shipLength) {
 
         //holds information only about the ship currently being placed
         resetMatrix(&tempGrid);
-        updateMatrix(&tempGrid, shipLength, cursorX, cursorY, vertical);        
+        updatePlayerMatrix(&tempGrid, shipLength, cursorX, cursorY, vertical);        
 
         if (gpio_get_level(CONFIRM_BUTTON) == 0 && !(checkOverlap(&playerGrid, &tempGrid))) {
             break;
@@ -156,7 +156,7 @@ void placeShips(int shipLength) {
         //displays the ship currently being placed and the previous ships placed
         resetMatrix(&displayedGrid);
         mergeMatrix(&displayedGrid, &playerGrid);
-        updateMatrix(&displayedGrid, shipLength, cursorX, cursorY, vertical);
+        updatePlayerMatrix(&displayedGrid, shipLength, cursorX, cursorY, vertical);
         updateDisplay(&displayedGrid, playerHandle);
 
         vTaskDelay(pdMS_TO_TICKS(200));

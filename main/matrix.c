@@ -46,7 +46,7 @@ void resetMatrix(GridMatrix* matrix) {
     }
 }
 
-void updateMatrix(GridMatrix* matrix, int shipLength, int cursorX, int cursorY, bool vertical) {
+void updatePlayerMatrix(GridMatrix* matrix, int shipLength, int cursorX, int cursorY, bool vertical) {
     int i;
 
     if (vertical) {
@@ -58,6 +58,10 @@ void updateMatrix(GridMatrix* matrix, int shipLength, int cursorX, int cursorY, 
             (*matrix)[cursorY][i] = 1;
         }
     }
+}
+
+void updateAttackMatrix(GridMatrix* matrix, AttackInfo* info) {
+    
 }
 
 void mergeMatrix(GridMatrix* baseGrid, GridMatrix* otherGrid) {
