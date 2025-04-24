@@ -2,7 +2,6 @@
 #include "matrix.h"
 #include <stdint.h>
 #include <string.h>
-#include "freertos/FreeRTOS.h"
 #include "esp_err.h"
 #include "esp_log.h"
 #include "driver/spi_common.h"
@@ -40,8 +39,8 @@ static spi_device_interface_config_t attackMatrix = {
     .queue_size = 2,
 };
 
-static spi_device_handle_t playerHandle;
-static spi_device_handle_t attackHandle;
+spi_device_handle_t playerHandle;
+spi_device_handle_t attackHandle;
 
 void initSPI(void) {
     //Initialize configuration for SPI buses
@@ -60,7 +59,7 @@ void initSPI(void) {
     ESP_ERROR_CHECK(spi_bus_add_device(SPI2_HOST, &attackMatrix, &attackHandle));
 }
 
-void sendCmd(spi_device_handle_t devHandle, uint8_t addr, uint8_t data) {
+static void sendCmd(spi_device_handle_t devHandle, uint8_t addr, uint8_t data) {
     spi_transaction_t trans = {0};
     trans.flags = SPI_TRANS_USE_TXDATA;
     trans.length = 16;
@@ -91,79 +90,6 @@ void updateDisplay(GridMatrix* grid, spi_device_handle_t devHandle) {
         data = getRow(grid, addr - 1);
         sendCmd(devHandle, addr, data);
     }
-}
-
-void placeShips(int shipLength) {
-    GridMatrix displayedGrid = {0};
-    GridMatrix tempGrid = {0};
-
-    int cursorX = 7;
-    int cursorY = 7;
-    bool vertical = true;
-
-    while(1) {
-
-        //User cursor moves up
-        if (gpio_get_level(UP_BUTTON) == 0) {
-            if ((vertical && (cursorY - shipLength < 0)) || (!vertical && (cursorY - 1 < 0))) {
-                //Do nothing, goes past bounds
-            } else {
-                cursorY--;
-            }
-        }
-
-        //User cursor moves right
-        if (gpio_get_level(RIGHT_BUTTON) == 0) {
-            if ((!vertical && (cursorX + shipLength > 7)) || (vertical && (cursorX + 1 > 7))) {
-                //Do nothing, goes past bounds
-            } else {
-                cursorX++;
-            }
-        }
-
-        //User cursor moves down
-        if (gpio_get_level(DOWN_BUTTON) == 0) {
-            if (cursorY + 1 > 7) {
-                //Do nothing, goes past bounds
-            } else {
-                cursorY++;
-            }
-        }
-
-        //User cursor moves left
-        if (gpio_get_level(LEFT_BUTTON) == 0) {
-            if (cursorX - 1 < 0) {
-                //Do nothing, goes past bounds
-            } else {
-                cursorX--;
-            }
-        }
-
-        if (gpio_get_level(ROTATE_BUTTON) == 0)  {
-            if (!((vertical && (cursorX > 7 - shipLength + 1)) || (!vertical && (cursorY < shipLength - 1)))) {
-                vertical = !vertical;
-            }
-        }
-
-        //holds information only about the ship currently being placed
-        resetMatrix(&tempGrid);
-        updatePlayerMatrix(&tempGrid, shipLength, cursorX, cursorY, vertical);        
-
-        if (gpio_get_level(CONFIRM_BUTTON) == 0 && !(checkOverlap(&playerGrid, &tempGrid))) {
-            break;
-        }
-
-        //displays the ship currently being placed and the previous ships placed
-        resetMatrix(&displayedGrid);
-        mergeMatrix(&displayedGrid, &playerGrid);
-        updatePlayerMatrix(&displayedGrid, shipLength, cursorX, cursorY, vertical);
-        updateDisplay(&displayedGrid, playerHandle);
-
-        vTaskDelay(pdMS_TO_TICKS(200));
-    }
-
-    mergeMatrix(&playerGrid, &tempGrid);
-
 }
 
 
