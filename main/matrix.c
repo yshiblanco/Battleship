@@ -46,25 +46,24 @@ void resetMatrix(GridMatrix* matrix) {
     }
 }
 
-void updatePlayerMatrix(int shipLength, int cursorX, int cursorY, bool vertical) {
+void updatePlayerMatrix(GridMatrix* matrix, int shipLength, int cursorX, int cursorY, bool vertical) {
     int i;
 
     if (vertical) {
         for (i = cursorY; i > cursorY - shipLength; i--) {
-            playerGrid[i][cursorX] = 1;
+            (*matrix)[i][cursorX] = 1;
         }
     } else {
         for (i = cursorX; i < cursorX + shipLength; i++) {
-            playerGrid[cursorY][i] = 1;
+            (*matrix)[cursorY][i] = 1;
         }
     }
 }
 
-void updateAttackMatrix(GameData* data) {
+void updateAttackMatrix(GridMatrix* matrix, GameData* data) {
     int x = data->message.attackData.x;
     int y = data->message.attackData.y;
-
-    attackGrid[x][y] = 1;
+    (*matrix)[x][y] = 1;
 }
 
 void mergeMatrix(GridMatrix* baseGrid, GridMatrix* otherGrid) {
