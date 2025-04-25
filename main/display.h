@@ -12,5 +12,8 @@ extern spi_device_handle_t attackHandle;
 void initSPI(void);
 void initDisplays(void);
 void updateDisplay(GridMatrix* grid, spi_device_handle_t devHandle);
+void displayWaitingScreen(void);
+void displayWin(void);
+void displayLose(void);
 
 #endif

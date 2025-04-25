@@ -92,6 +92,73 @@ void updateDisplay(GridMatrix* grid, spi_device_handle_t devHandle) {
     }
 }
 
+void displayWaitingScreen(void) {
+    sendCmd(attackHandle, 4, 0xC0);
+    sendCmd(attackHandle, 5, 0xC0);
+    vTaskDelay(pdMS_TO_TICKS(300));
+
+    sendCmd(attackHandle, 4, 0xD8);
+    sendCmd(attackHandle, 5, 0xD8);
+    vTaskDelay(pdMS_TO_TICKS(300));
+
+    sendCmd(attackHandle, 4, 0xDB);
+    sendCmd(attackHandle, 5, 0xDB);
+    vTaskDelay(pdMS_TO_TICKS(300));
+
+    sendCmd(attackHandle, 4, 0x00);
+    sendCmd(attackHandle, 5, 0x00);
+    vTaskDelay(pdMS_TO_TICKS(300));
+}
+
+void displayWin(void) {
+    //Clearing matrices
+    resetMatrix(&playerGrid);
+    resetMatrix(&attackGrid);
+    updateDisplay(&playerGrid, playerHandle);
+    updateDisplay(&attackGrid, attackHandle);
+
+    //Display W on screen that previously showed player's ships
+    sendCmd(playerHandle, 2, 0x63);
+    sendCmd(playerHandle, 3, 0x63);
+    sendCmd(playerHandle, 4, 0x63);
+    sendCmd(playerHandle, 5, 0x6B);
+    sendCmd(playerHandle, 6, 0x7F);
+    sendCmd(playerHandle, 7, 0x77);
+    sendCmd(playerHandle, 8, 0x63);
+
+    //Display happy face on screen that previously showed player's attack grid
+    sendCmd(attackHandle, 2, 0x66);
+    sendCmd(attackHandle, 3, 0x66);
+    sendCmd(attackHandle, 5, 0x81);
+    sendCmd(attackHandle, 6, 0x42);
+    sendCmd(attackHandle, 7, 0x3C);
+}
+
+void displayLose(void) {
+    //Clearing matrices
+    resetMatrix(&playerGrid);
+    resetMatrix(&attackGrid);
+    updateDisplay(&playerGrid, playerHandle);
+    updateDisplay(&attackGrid, attackHandle);
+
+    //Display L on screen that previously showed the player's ships
+    sendCmd(playerHandle, 2, 0x60);
+    sendCmd(playerHandle, 3, 0x60);
+    sendCmd(playerHandle, 4, 0x60);
+    sendCmd(playerHandle, 5, 0x60);
+    sendCmd(playerHandle, 6, 0x60);
+    sendCmd(playerHandle, 7, 0x60);
+    sendCmd(playerHandle, 8, 0x7E);
+
+    //Display sad face on screen that previously showed player's attack grid
+    sendCmd(attackHandle, 2, 0x66);
+    sendCmd(attackHandle, 3, 0x66);
+    sendCmd(attackHandle, 5, 0x3C);  
+    sendCmd(attackHandle, 6, 0x42);      
+    sendCmd(attackHandle, 7, 0x81);
+
+}
+
 
 
 
