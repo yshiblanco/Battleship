@@ -92,6 +92,14 @@ void updateDisplay(GridMatrix* grid, spi_device_handle_t devHandle) {
     }
 }
 
+void displayShips(void) {
+    updateDisplay(&shipGrid, playerHandle);
+}
+
+void displayAllHits(void) {
+    updateDisplay(&hitsGrid, playerHandle);
+}
+
 void displayWaitingScreen(void) {
     sendCmd(attackHandle, 4, 0xC0);
     sendCmd(attackHandle, 5, 0xC0);
