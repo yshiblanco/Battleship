@@ -35,7 +35,7 @@ GridMatrix attackGrid = {
     {0,0,0,0,0,0,0,0},
 };
 
-GridMatrix hitGrid = {
+GridMatrix hitsGrid = {
     {0,0,0,0,0,0,0,0},
     {0,0,0,0,0,0,0,0},
     {0,0,0,0,0,0,0,0},
@@ -68,7 +68,7 @@ void resetMatrix(GridMatrix* matrix) {
     }
 }
 
-void updatePlayerMatrix(GridMatrix* matrix, int shipLength, int cursorX, int cursorY, bool vertical) {
+void updateShipMatrix(GridMatrix* matrix, int shipLength, int cursorX, int cursorY, bool vertical) {
     int i;
 
     if (vertical) {
@@ -82,10 +82,10 @@ void updatePlayerMatrix(GridMatrix* matrix, int shipLength, int cursorX, int cur
     }
 }
 
-void updateAttackMatrix(GridMatrix* matrix, GameData* data) {
-    int x = data->message.attackData.x;
-    int y = data->message.attackData.y;
+int updateMatrix(GridMatrix* matrix, int x, int y) {
+    int temp = (*matrix)[x][y];
     (*matrix)[x][y] = 1;
+    return temp;
 }
 
 void mergeMatrix(GridMatrix* baseGrid, GridMatrix* otherGrid) {

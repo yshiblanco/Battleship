@@ -13,8 +13,8 @@ extern GridMatrix hitGrid;
 
 uint8_t getRow(GridMatrix* matrix, int row);
 void resetMatrix(GridMatrix* matrix);
-void updatePlayerMatrix(GridMatrix* matrix, int shipLength, int cursorX, int cursorY, bool vertical);
-void updateAttackMatrix(GridMatrix* matrix, GameData* data);
+void updateShipMatrix(GridMatrix* matrix, int shipLength, int cursorX, int cursorY, bool vertical);
+int updateMatrix(GridMatrix* matrix, int x, int y);
 void mergeMatrix(GridMatrix* baseGrid, GridMatrix* otherGrid);
 bool checkOverlap(GridMatrix* baseGrid, GridMatrix* otherGrid);
 
