@@ -9,7 +9,7 @@ typedef int GridMatrix[8][8];
 extern GridMatrix playerGrid;
 extern GridMatrix shipGrid;
 extern GridMatrix attackGrid;
-extern GridMatrix hitGrid;
+extern GridMatrix hitsGrid;
 
 uint8_t getRow(GridMatrix* matrix, int row);
 void resetMatrix(GridMatrix* matrix);
